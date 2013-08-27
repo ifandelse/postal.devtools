@@ -2,47 +2,37 @@ var viewer = document.querySelector( ".viewer" );
 var messages = document.getElementById( "messages" );
 var $messages = $( messages );
 var $logSize = $( "#log-size" );
-
 var $details = $( ".details" );
 var $dataPre = $( "#data-pre" );
 var $envPre = $( "#envelope-pre" );
-
-var method = "(function(){if(!window._postalWireTapMessages)return [];var messages = window._postalWireTapMessages; window._postalWireTapMessages = []; return messages; })();";
 var height;
+var log = [];
+var prev;
+var port = chrome.runtime.connect({ name: "postal.inspector.js" });
+
+port.onMessage.addListener(function(msg, sender, sendResponse) {
+	//setTimeout(function() { alert('onMessage event in postal.inspector.js'); }, 0);
+	var line;
+	if(msg.type === "postal.inspector" && msg.hasOwnProperty("envelope")) {
+		var _atBottom = atBottom();
+		line = msg.envelope;
+		log.push( line );
+		var html = "<li data-index='" + (log.length - 1) + "'><span class='channel'>" + line.channel + "</span><span class='topic'>" + line.topic + "</span></li>";
+		$messages.append( html );
+		$logSize.text( log.length );
+		if ( _atBottom ) {
+			viewer.scrollTop = viewer.scrollHeight - height;
+		}
+	} else if (msg.type === "postal.inspector" && msg.cmd === "content_script_connect") {
+		clear();
+	}
+});
 
 function atBottom() {
 	height = viewer.clientHeight;
 	var scrollHeight = viewer.scrollHeight;
-	
 	return scrollHeight === height || viewer.scrollTop + height + 10 >= scrollHeight;
 }
-
-var log = [];
-
-function update () {
-	var _atBottom = atBottom();
-	chrome.devtools.inspectedWindow.eval( method, function ( data ) {
-		if ( !data && !data.length) return;
-		var last = data[ data.length - 1 ];
-		data.forEach( function ( line ) {
-			var isLast = line === last;
-			var index = log.length;
-			
-			line = JSON.parse( line );
-			log.push( line );
-
-			var html = "<li data-index='" + index + "' class='" + (isLast ? 'break' : '') + "'><span class='channel'>" + line.env.channel + "</span><span class='topic'>" + line.env.topic + "</span></li>";
-			$messages.append( html );
-		});
-
-		$logSize.text( log.length );
-
-
-		if ( _atBottom ) {
-			viewer.scrollTop = viewer.scrollHeight - height;
-		}
-	});
-};
 
 function select( log ) {
 	if ( log === null ) {
@@ -54,22 +44,18 @@ function select( log ) {
 		$details.hide();
 		return;
 	}
-
-	$dataPre.html( JSON.stringify( log.data, null, "  " ) );
-
+	$dataPre.html( JSON.stringify( log, null, "  " ) );
 	var envCopy = {};
-	for ( var prop in log.env ) {
+	for ( var prop in log ) {
 		if ( prop !== "data" ) {
-			envCopy[ prop ] = log.env[ prop ];
+			envCopy[ prop ] = log[ prop ];
 		} else {
 			envCopy.data = "...";
 		}
 	}
-
 	$envPre.html( JSON.stringify( envCopy, null, "  " ) );
-
 	$details.show();
-};
+}
 
 function clear () {
 	select( null );
@@ -78,14 +64,11 @@ function clear () {
 	messages.innerHTML = "";
 }
 
-document.getElementById( 'refresh' ).addEventListener( "click", update, false );
 document.getElementById( 'clear' ).addEventListener( "click", clear, false );
 
 $( document ).on( "click", ".details .close", function () {
 	select( null );
 });
-
-var prev;
 
 $( messages ).on( "click", "li", function ( e ) {
 	if ( prev ) {
@@ -95,7 +78,3 @@ $( messages ).on( "click", "li", function ( e ) {
 	var item = log[ parseInt( prev.data( "index" ), 10 ) ];
 	select( item );
 });
-
-
-setInterval( update, 500 );
-
