@@ -44,7 +44,7 @@ function select( log ) {
 		$details.hide();
 		return;
 	}
-	$dataPre.html( JSON.stringify( log, null, "  " ) );
+	$dataPre.html( JSON.stringify( log.data, null, "  " ) );
 	var envCopy = {};
 	for ( var prop in log ) {
 		if ( prop !== "data" ) {

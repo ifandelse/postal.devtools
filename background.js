@@ -8,6 +8,17 @@ var onConnectActions = {
 		}
 	},
 	"pi_content.js" : function(port) {
+		/*var obj = {};
+		obj.portId_ = port.portId_;
+		obj.name = port.name;
+		obj.senderId = port.sender.id;
+		obj.senderUrl = port.sender.url;
+		obj.tabId = port.sender.tab.id;
+		obj.tabActive = port.sender.tab.active;
+		obj.tabWindowId = port.sender.tab.windowId;
+		obj.tabStatus = port.sender.tab.status;
+
+		setTimeout(function() { alert("Tab: " + JSON.stringify(obj, null, 2) ); }, 0);*/
 		if(ports.hasOwnProperty("devtools.js")) {
 			ports["devtools.js"].postMessage({
 				type: "postal.inspector",
