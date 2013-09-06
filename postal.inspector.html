@@ -7,9 +7,13 @@
 </head>
 <body>
 	<div class="actions">
-		<button id="refresh">Refresh</button>
-		<button id="clear">Clear</button>
-		Log Size: <span id="log-size"></span>
+        <div id="ctrls">
+            <button id="clear">Clear Log</button>
+            <input type="checkbox" id="preserve" checked/><span>Preserve Log</span>
+        </div>
+        <div id="info">
+            Log Size: <span id="log-size"></span>
+        </div>
 	</div>
 	<div class="filters"></div>
 	<div class="viewer">

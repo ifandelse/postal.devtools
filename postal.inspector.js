@@ -1,48 +1,71 @@
-var viewer = document.querySelector( ".viewer" );
-var messages = document.getElementById( "messages" );
-var $messages = $( messages );
-var $logSize = $( "#log-size" );
-
-var $details = $( ".details" );
-var $dataPre = $( "#data-pre" );
-var $envPre = $( "#envelope-pre" );
-
-var method = "(function(){if(!window._postalWireTapMessages)return [];var messages = window._postalWireTapMessages; window._postalWireTapMessages = []; return messages; })();";
+// synchronous alerts cause wacky things
+// to happen inside chrome extension scripts
+function alertify(msg) {
+	setTimeout(function(){
+		alert(msg);
+	}, 0);
+}
+var preserveLog  = true;
+var viewer       = document.querySelector( ".viewer" );
+var messages     = document.getElementById( "messages" );
+var $messages    = $( messages );
+var $logSize     = $( "#log-size" );
+var $details     = $( ".details" );
+var $dataPre     = $( "#data-pre" );
+var $envPre      = $( "#envelope-pre" );
+var $preserveLog = $( "#preserve" );
 var height;
+var log = [];
+var prev;
+var port = chrome.runtime.connect({ name: "postal.inspector.js" });
+var behaviors = {
+	"analyzed.envelope" : function(msg, sender, sendResponse) {
+		var _atBottom = atBottom();
+		var line = msg.data;
+		log.push( line );
+		var html = "<li data-index='" + (log.length - 1) + "'><span class='channel'>" + line.channel + "</span><span class='topic'>" + line.topic + "</span></li>";
+		$messages.append( html );
+		$logSize.text( log.length );
+		if ( _atBottom ) {
+			viewer.scrollTop = viewer.scrollHeight - height;
+		}
+	},
+	"tab.updating" : function(msg) {
+		//alertify("Tab change notice in postal.inspector.js: " + JSON.stringify(msg.data, null, 2));
+		if(!preserveLog) {
+			clear();
+		}
+	},
+	"content.script.connect" : function(msg, sender, sendResponse) {
+		//alertify("content script connect inside postal.inspector.js: " + JSON.stringify(msg, null, 2));
+		//clear();
+	},
+	"dev.panel.shown" : function(msg, sender, sendResponse) {
+		//setTimeout(function() { alert("Dev Panel Shown notice in postal.inspector.js. Port ID: " + port.portId_); }, 0);
+	}
+};
+
+chrome.runtime.onConnect.addListener(function(p) {
+	alertify('onConnect event in postal.inspector.js - ' + p.name);
+});
+
+chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse){
+	if(msg.channel === "postal.inspector" && msg.topic && behaviors.hasOwnProperty(msg.topic)) {
+		behaviors[msg.topic]( msg, sender, sendResponse );
+	}
+});
+
+port.onMessage.addListener(function(msg, sender, sendResponse) {
+	if(msg.channel === "postal.inspector" && msg.topic && behaviors.hasOwnProperty(msg.topic)) {
+		behaviors[msg.topic]( msg, sender, sendResponse );
+	}
+});
 
 function atBottom() {
 	height = viewer.clientHeight;
 	var scrollHeight = viewer.scrollHeight;
-	
 	return scrollHeight === height || viewer.scrollTop + height + 10 >= scrollHeight;
 }
-
-var log = [];
-
-function update () {
-	var _atBottom = atBottom();
-	chrome.devtools.inspectedWindow.eval( method, function ( data ) {
-		if ( !data && !data.length) return;
-		var last = data[ data.length - 1 ];
-		data.forEach( function ( line ) {
-			var isLast = line === last;
-			var index = log.length;
-			
-			line = JSON.parse( line );
-			log.push( line );
-
-			var html = "<li data-index='" + index + "' class='" + (isLast ? 'break' : '') + "'><span class='channel'>" + line.env.channel + "</span><span class='topic'>" + line.env.topic + "</span></li>";
-			$messages.append( html );
-		});
-
-		$logSize.text( log.length );
-
-
-		if ( _atBottom ) {
-			viewer.scrollTop = viewer.scrollHeight - height;
-		}
-	});
-};
 
 function select( log ) {
 	if ( log === null ) {
@@ -54,22 +77,18 @@ function select( log ) {
 		$details.hide();
 		return;
 	}
-
 	$dataPre.html( JSON.stringify( log.data, null, "  " ) );
-
 	var envCopy = {};
-	for ( var prop in log.env ) {
+	for ( var prop in log ) {
 		if ( prop !== "data" ) {
-			envCopy[ prop ] = log.env[ prop ];
+			envCopy[ prop ] = log[ prop ];
 		} else {
 			envCopy.data = "...";
 		}
 	}
-
 	$envPre.html( JSON.stringify( envCopy, null, "  " ) );
-
 	$details.show();
-};
+}
 
 function clear () {
 	select( null );
@@ -78,14 +97,11 @@ function clear () {
 	messages.innerHTML = "";
 }
 
-document.getElementById( 'refresh' ).addEventListener( "click", update, false );
 document.getElementById( 'clear' ).addEventListener( "click", clear, false );
 
 $( document ).on( "click", ".details .close", function () {
 	select( null );
 });
-
-var prev;
 
 $( messages ).on( "click", "li", function ( e ) {
 	if ( prev ) {
@@ -96,6 +112,6 @@ $( messages ).on( "click", "li", function ( e ) {
 	select( item );
 });
 
-
-setInterval( update, 500 );
-
+$preserveLog.on("change", function() {
+	preserveLog = $preserveLog.is(":checked");
+});

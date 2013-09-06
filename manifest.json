@@ -1,7 +1,23 @@
 {
-  "name": "Postal.js",
-  "version": "0.1.3",
-  "manifest_version": 2,
-  "minimum_chrome_version": "18.0",
-  "devtools_page": "devtools.html"
+	"manifest_version"       : 2,
+	"name"                   : "Postal.js Inspector",
+	"description"            : "Chrome Dev Tools Inspector for postal.js - a client-side messaging library",
+	"version"                : "0.2.0",
+	"minimum_chrome_version" : "22.0",
+	"devtools_page"          : "devtools.html",
+	"permissions"            : [ "tabs", "<all_urls>", "background" ],
+	"background"             : {
+		"scripts"    : [ "background.js" ],
+		"persistent" : false
+	},
+	"content_scripts": [
+		{
+			"matches": [
+				"<all_urls>"
+			],
+			"js": [
+				"pi_content.js"
+			]
+		}
+	]
 }
