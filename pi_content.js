@@ -1,6 +1,5 @@
 window.addEventListener( "message", function ( event ) {
-	//console.log(event.data);
-	if ( event.source == window && event.data && event.data.type === "postal.inspector") {
+	if ( event.source == window && event.data && event.data.channel === "postal.inspector" && event.data.topic === "wiretap.item") {
 		chrome.runtime.sendMessage( event.data );
 	}
 }, false );

@@ -19,6 +19,19 @@ body {
 	background: #eee;
 }
 
+.actions #ctrls {
+    float: left;
+}
+
+.actions #info {
+    float: right;
+    margin-right: 10%;
+}
+
+.actions:after {
+    clear:both;
+}
+
 .filters {
 	position: absolute;
 	top: 30px;
